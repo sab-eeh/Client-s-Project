@@ -3,7 +3,7 @@ import { Phone, Mail, MapPin, Instagram, MessageCircle, Clock, Shield, Award, Us
 
 const Footer = () => {
   return (
-    <footer className="bg-[#0F1518] text-gray-300 mt-16">
+    <footer className="bg-[#0F1518] text-gray-300">
       {/* Main Footer Content */}
       <div className="container mx-auto px-6 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
@@ -19,7 +19,7 @@ const Footer = () => {
             </p>
             <div className="flex items-center gap-4">
               <a
-                href="https://instagram.com/precisiontoronto"
+                href="https://www.instagram.com/precision.to"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-800 hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-md"
