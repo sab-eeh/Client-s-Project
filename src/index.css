@@ -1,7 +1,12 @@
-@import "tailwindcss";
+/* External CSS imports MUST come first */
 @import "swiper/css";
 @import "swiper/css/navigation";
 @import "swiper/css/pagination";
+
+/* Then Tailwind layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 
 /* ==============================
