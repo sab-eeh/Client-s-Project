@@ -18,13 +18,7 @@ export default defineConfig({
         secure: false,
       },
     },
-    allowedHosts: [
-      "d22f1ff557df.ngrok-free.app",
-      "*.ngrok-free.app",
-      "*.loca.lt",
-    ],
   },
-
   build: {
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
