@@ -1,15 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Calendar } from "../components/ui/calender";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../components/ui/popover";
 import ProgressTracker from "../components/ProgressTracker";
 import FloatingContact from "../components/FloatingContact";
 import Header from "../layout/Header";
@@ -24,6 +20,7 @@ import { format } from "date-fns";
 import { cn } from "../lib/utils";
 import api from "../api/client";
 import { Title, Meta } from "react-head";
+import { BookingContext } from "../context/BookingContext";
 
 const BUSINESS_MINUTES_PER_SLOT = 60;
 
@@ -35,37 +32,65 @@ function toYMD(date) {
 export default function BookingPage() {
   const navigate = useNavigate();
   const { state } = useLocation();
+  const { booking, setBooking } = useContext(BookingContext);
 
-  if (!state) {
+  if (!state && !booking.services?.length) {
     return <div className="p-10 text-center">No booking data found.</div>;
   }
 
-  const { selectedCar, selectedServices, selectedAddons, totalPrice } = state;
+  const { selectedCar, selectedServices, selectedAddons, totalPrice } =
+    state || booking;
 
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(
+    booking.selectedDate || null
+  );
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedTime, setSelectedTime] = useState(booking.selectedTime || "");
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const [customerInfo, setCustomerInfo] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    notes: "",
-  });
+  const [customerInfo, setCustomerInfo] = useState(
+    booking.customerInfo || {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      notes: "",
+    }
+  );
 
-  const [vehicleInfo, setVehicleInfo] = useState({
-    make: "",
-    model: "",
-    year: "",
-    color: "",
-    license: "",
-  });
+  const [vehicleInfo, setVehicleInfo] = useState(
+    booking.vehicleInfo || {
+      make: "",
+      model: "",
+      year: "",
+      color: "",
+      license: "",
+    }
+  );
 
-  // Fetch availability when date changes
+  // Restore booking draft
+  useEffect(() => {
+    const saved = localStorage.getItem("precision_booking_draft_v1");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setSelectedDate(
+        parsed.selectedDate ? new Date(parsed.selectedDate) : null
+      );
+      setSelectedTime(parsed.selectedTime || "");
+      setCustomerInfo(parsed.customerInfo || {});
+      setVehicleInfo(parsed.vehicleInfo || {});
+    }
+  }, []);
+
+  // Sync draft
+  useEffect(() => {
+    const draft = { selectedDate, selectedTime, customerInfo, vehicleInfo };
+    localStorage.setItem("precision_booking_draft_v1", JSON.stringify(draft));
+  }, [selectedDate, selectedTime, customerInfo, vehicleInfo]);
+
+  // Fetch slots
   useEffect(() => {
     (async () => {
       setSlotsError("");
@@ -77,10 +102,12 @@ export default function BookingPage() {
         setLoadingSlots(true);
         const ymd = toYMD(selectedDate);
         const data = await api(`/api/bookings/availability?date=${ymd}`);
+        // Expect API to return: { availableSlots: [{start, end, label, booked: true/false}] }
         const slots = (data?.availableSlots || []).map((s) => ({
           start: new Date(s.start),
           end: new Date(s.end),
           label: format(new Date(s.start), "h:mm a"),
+          booked: s.booked || false,
         }));
         setAvailableSlots(slots);
       } catch (err) {
@@ -112,6 +139,7 @@ export default function BookingPage() {
       slotMinutes: BUSINESS_MINUTES_PER_SLOT,
     };
 
+    setBooking((prev) => ({ ...prev, ...bookingData }));
     setSubmitting(true);
     navigate("/confirmation", { state: bookingData });
   };
@@ -137,7 +165,7 @@ export default function BookingPage() {
       <Title>Book Car Detailing in Toronto | Precision Toronto</Title>
       <Meta
         name="description"
-        content="Book your car cleaning and detailing appointment with Precision Toronto. Fast, reliable, and professional auto detailing services for all car types in Toronto, Canada."
+        content="Book your car cleaning and detailing appointment with Precision Toronto."
       />
       <div className="min-h-screen bg-[#0A0F1C] flex flex-col text-white">
         <Header />
@@ -145,7 +173,6 @@ export default function BookingPage() {
         <ProgressTracker currentStep={3} />
 
         <div className="container mx-auto px-4 md:px-8 py-10 flex-1">
-          {/* Back & Title */}
           <div className="flex items-center gap-4 mb-10">
             <Button
               variant="outline"
@@ -175,55 +202,19 @@ export default function BookingPage() {
                   & Time
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Date Picker */}
                   <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="date"
-                      className="text-white text-sm font-medium"
-                    >
-                      Preferred Date
-                    </Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal mt-2 rounded-xl py-3 px-4 border border-gray-700 hover:bg-gray-700 " +
-                              "bg-[#1A2234] hover:bg-[#223048] text-white shadow-md " +
-                              "transition-colors duration-200",
-                            !selectedDate && "text-gray-400"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-5 w-5 text-blue-400" />
-                          {selectedDate
-                            ? format(selectedDate, "PPP")
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-3 rounded-xl">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            return date < today;
-                          }}
-                          className="p-2 rounded-lg text-white grid place-items-center
-                                  [&_.rdp-months]:grid [&_.rdp-months]:grid-cols-1 md:[&_.rdp-months]:grid-cols-2 [&_.rdp-months]:gap-6
-                                  [&_.rdp-month]:bg-[#1A2234] [&_.rdp-month]:p-4 [&_.rdp-month]:rounded-lg [&_.rdp-month]:shadow-md
-                                  [&_.rdp-day_selected]:bg-blue-500 [&_.rdp-day_selected]:text-white
-                                  [&_.rdp-day:hover]:bg-blue-600/40 [&_.rdp-day_disabled]:opacity-30 [&_.rdp-day_disabled]:cursor-not-allowed"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Label>Preferred Date</Label>
+                    <DatePicker
+                      selected={selectedDate}
+                      onChange={(date) => setSelectedDate(date)}
+                      minDate={new Date()}
+                      className="w-full rounded-lg bg-[#1A2234] text-white px-4 py-3 border border-gray-700"
+                      placeholderText="Pick a date"
+                    />
                   </div>
 
-                  {/* Time Slots */}
                   <div>
-                    <Label htmlFor="time">Preferred Time</Label>
+                    <Label>Preferred Time</Label>
                     {loadingSlots && (
                       <p className="mt-3 text-sm text-blue-300">
                         Loading slots…
@@ -249,15 +240,20 @@ export default function BookingPage() {
                             selectedTime === slot.label ? "default" : "outline"
                           }
                           size="sm"
-                          onClick={() => setSelectedTime(slot.label)}
+                          onClick={() =>
+                            !slot.booked && setSelectedTime(slot.label)
+                          }
+                          disabled={slot.booked}
                           className={cn(
-                            "rounded-md py-2 text-sm text-white border border-gray-700 hover:bg-gray-700",
-                            selectedTime === slot.label
+                            "rounded-md py-2 text-sm text-white border border-gray-700",
+                            slot.booked
+                              ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                              : selectedTime === slot.label
                               ? "bg-blue-500 text-white"
                               : "bg-[#1A2234] hover:bg-[#223048] text-gray-200"
                           )}
                         >
-                          {slot.label}
+                          {slot.label} {slot.booked && "(Booked)"}
                         </Button>
                       ))}
                     </div>
@@ -389,7 +385,7 @@ export default function BookingPage() {
                   {selectedDate && (
                     <SummaryRow
                       label="Date:"
-                      value={format(selectedDate, "PPP")}
+                      value={format(selectedDate, "MMM dd, yyyy")}
                       highlight
                     />
                   )}
