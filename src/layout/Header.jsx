@@ -24,11 +24,12 @@ const DESKTOP_LINKS = [
 
 const MOBILE_LINKS = [
   { to: "/", label: "Home" },
-  { to: "/about", label: "About Us" },
+  { to: "", state: { scrollTo: "car-selection" }, label: "Book Now" },
   { to: "", state: { scrollTo: "car-selection" }, label: "Pick a Service" },
   { to: "/connect", label: "Connect with Us" },
   { to: "", state: { scrollTo: "reviews" }, label: "Google Reviews" },
   { to: "/contact", label: "Contact Us" },
+  { to: "/about", label: "About Us" },
 ];
 
 // ✅ Contact Info
@@ -275,6 +276,16 @@ const Header = memo(() => {
                 animate="visible"
                 exit="hidden"
               >
+                {/* Contact Info */}
+                {/* <PrefetchLink to="/" onClick={() => setMenuOpen(false)}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-blue-400 text-black w-full py-2 my-4 rounded-lg shadow-md"
+              >
+                Book Now
+              </motion.button>
+            </PrefetchLink> */}
                 {MOBILE_LINKS.map((link) => (
                   <motion.li key={link.label} variants={itemVariants}>
                     <NavLinkItem
@@ -285,17 +296,6 @@ const Header = memo(() => {
                   </motion.li>
                 ))}
               </motion.ul>
-
-              {/* Contact Info */}
-              <PrefetchLink to="/" onClick={() => setMenuOpen(false)}>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-blue-400 text-black w-full py-2 my-4 rounded-lg shadow-md"
-                >
-                  Book Now
-                </motion.button>
-              </PrefetchLink>
 
               <div className="pt-6 border-t border-[#1F242C] space-y-4 text-gray-300">
                 <div className="flex items-center gap-2 text-[#FFD700]">
